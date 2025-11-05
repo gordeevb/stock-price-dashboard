@@ -133,8 +133,8 @@ def validate_parameters(period: str, interval: str) -> Tuple[bool, str]:
     Validate period and interval parameters.
 
     Args:
-        period (str): Time period for data (e.g., '1mo', '1y')
-        interval (str): Data interval (e.g., '1d', '1h')
+        period (str): Time period for data ('1mo', '1y')
+        interval (str): Data interval ('1d', '1h')
 
     Returns:
         Tuple[bool, str]: (is_valid, error_message)

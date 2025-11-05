@@ -379,8 +379,8 @@ def plot_returns_distribution(df: pd.DataFrame, ticker: str = "",
 
 
         # Add vertical line at mean
-        ax.axvline(x=mu, color=COLOR_PALETTE['accent'], linestyle='--',
-                  linewidth=2, alpha=0.7)
+        #ax.axvline(x=mu, color=COLOR_PALETTE['accent'], linestyle='--',
+                  #linewidth=2, alpha=0.7)
 
         # Formatting
         title = f'{ticker} Daily Returns Distribution' if ticker else 'Daily Returns Distribution'
