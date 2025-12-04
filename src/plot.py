@@ -142,7 +142,7 @@ def plot_price_chart(df: pd.DataFrame, ticker: str = "",
             for i, window in enumerate(ma_windows):
                 if len(df) >= window:
                     ma = df['Close'].rolling(window=window).mean()
-                    # Plot MA values (including NaN at start)
+                    # Plot MA values
                     ax.plot(df.index, ma.values, linewidth=1.5, alpha=0.7,
                            label=f'{window}-day MA',
                            color=colors[i % len(colors)],

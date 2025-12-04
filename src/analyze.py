@@ -604,7 +604,7 @@ def create_statistics_table(stats: Dict) -> pd.DataFrame:
         rows.append(['20-Day Avg Volume', f"{vol['average_volume']:,.0f}"])
         rows.append(['Current vs Avg', f"{vol['volume_ratio']:.1f}%"])
         if vol['is_spike']:
-            rows.append(['Volume Alert', '⚠ Volume Spike Detected!'])
+            rows.append(['Volume Alert', 'Volume Spike Detected!'])
         rows.append(['', ''])  # Blank row
 
     # Money Flow Metrics Section
