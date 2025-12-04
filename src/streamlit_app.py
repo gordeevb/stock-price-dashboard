@@ -1,5 +1,7 @@
 """
 Streamlit Web Interface for Stock Analysis Dashboard
+
+Fixed: White backgrounds for metrics and proper NaN/volatility handling
 """
 
 import streamlit as st
@@ -7,79 +9,70 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 from pathlib import Path
-from datetime import datetime
 
-# Add current directory to path for imports
+# Add src directory to path
 current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
+src_dir = current_dir / "src"
+if src_dir.exists():
+    sys.path.insert(0, str(src_dir))
 
-# Import required modules
-try:
-    from fetch_data import fetch_stock_data, VALID_PERIODS, VALID_INTERVALS
-    from analyze import generate_summary_statistics, create_statistics_table
-    from plot import (
-        plot_price_chart,
-        plot_volume_chart,
-        plot_volatility,
-        plot_returns_distribution
-    )
-    import config
-except ImportError:
-    class config:
-        DEFAULT_MA_WINDOWS = [20, 50, 200]
+from fetch_data import fetch_stock_data, VALID_PERIODS, VALID_INTERVALS
+from analyze import generate_summary_statistics
+from plot import plot_price_chart, plot_volume_chart, plot_volatility, plot_returns_distribution
 
 # Page configuration
 st.set_page_config(
     page_title="Stock Analysis Dashboard",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS - White backgrounds and proper styling
 st.markdown("""
     <style>
-    .main {
-        padding: 0rem 1rem;
-    }
     .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
+        background-color: #ffffff !important;
+        padding: 15px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        border: 1px solid #e0e0e0 !important;
     }
     .stMetric label {
         color: #000000 !important;
-        font-weight: 600;
-    }
-    .stMetric .metric-value {
-        color: #000000 !important;
+        font-weight: 600 !important;
     }
     .stMetric [data-testid="stMetricValue"] {
         color: #000000 !important;
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
     }
-    .stMetric [data-testid="stMetricDelta"] {
-        color: #000000 !important;
+    .sentiment-positive {
+        background-color: #d4edda;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 5px solid #28a745;
+        margin: 10px 0;
     }
-    .reportview-container .main .block-container {
-        max-width: 1200px;
-        padding-top: 2rem;
+    .sentiment-negative {
+        background-color: #f8d7da;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 5px solid #dc3545;
+        margin: 10px 0;
     }
-    h1 {
-        color: #2E86AB;
-    }
-    h2 {
-        color: #A23B72;
-    }
-    h3 {
-        color: #000000;
+    .sentiment-neutral {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 5px solid #ffc107;
+        margin: 10px 0;
     }
     </style>
 """, unsafe_allow_html=True)
 
 
 def init_session_state():
-    """Initialize session state variables"""
     if 'data' not in st.session_state:
         st.session_state.data = None
     if 'metadata' not in st.session_state:
@@ -90,117 +83,105 @@ def init_session_state():
         st.session_state.last_ticker = ""
 
 
-def display_header():
-    """Display application header"""
-    st.title("Stock Analysis Dashboard")
-    st.markdown("---")
+def format_value(value, value_type='currency'):
+    """Format values, handling None/NaN"""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return "N/A"
+    if value_type == 'currency':
+        return f"${value:.2f}"
+    elif value_type == 'percentage':
+        return f"{value:.2f}%"
+    return str(value)
+
+
+def get_sentiment_from_cmf(cmf_value):
+    if cmf_value is None or pd.isna(cmf_value):
+        return "Unknown", "neutral"
+    if cmf_value > 0.15:
+        return "Strong Buy", "positive"
+    elif cmf_value > 0.05:
+        return "Buy", "positive"
+    elif cmf_value > -0.05:
+        return "Neutral", "neutral"
+    elif cmf_value > -0.15:
+        return "Sell", "negative"
+    else:
+        return "Strong Sell", "negative"
+
+
+def display_cmf_and_sentiment(stats):
+    if stats is None or 'cmf' not in stats:
+        return
+
+    cmf_value = stats['cmf']
+    sentiment, sentiment_type = get_sentiment_from_cmf(cmf_value)
+
+    st.subheader("Market Sentiment Analysis")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if cmf_value is not None and not pd.isna(cmf_value):
+            st.metric("Chaikin Money Flow (20d)", f"{cmf_value:.3f}")
+        else:
+            st.metric("Chaikin Money Flow (20d)", "N/A")
+
+    with col2:
+        st.metric("Market Sentiment", sentiment)
+
+    if cmf_value is not None and not pd.isna(cmf_value):
+        if sentiment_type == "positive":
+            st.markdown(f"""
+            <div class="sentiment-positive">
+                <strong>Bullish Signal:</strong> CMF is positive ({cmf_value:.3f}), indicating buying pressure.
+            </div>
+            """, unsafe_allow_html=True)
+        elif sentiment_type == "negative":
+            st.markdown(f"""
+            <div class="sentiment-negative">
+                <strong>Bearish Signal:</strong> CMF is negative ({cmf_value:.3f}), indicating selling pressure.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="sentiment-neutral">
+                <strong>Neutral Signal:</strong> CMF is near zero ({cmf_value:.3f}), balanced pressure.
+            </div>
+            """, unsafe_allow_html=True)
 
 
 def display_sidebar():
-    """Display sidebar with input controls"""
     st.sidebar.header("Settings")
 
-    # Ticker input
-    ticker = st.sidebar.text_input(
-        "Stock Ticker Symbol",
-        value="AAPL",
-        help="Enter a valid stock ticker symbol"
-    ).upper()
+    ticker = st.sidebar.text_input("Stock Ticker Symbol", value="AAPL").upper()
+    period = st.sidebar.selectbox("Time Period", options=VALID_PERIODS, index=VALID_PERIODS.index('1mo'))
 
-    # Period selection
-    period = st.sidebar.selectbox(
-        "Time Period",
-        options=VALID_PERIODS,
-        index=VALID_PERIODS.index('1mo'),
-        help="Select the time period for historical data"
-    )
-
-    # Interval selection
     if period in ['1d', '5d']:
         available_intervals = VALID_INTERVALS
     else:
         available_intervals = [i for i in VALID_INTERVALS
                              if i not in ['1m', '2m', '5m', '15m', '30m', '60m', '90m']]
 
-    interval = st.sidebar.selectbox(
-        "Data Interval",
-        options=available_intervals,
-        index=available_intervals.index('1d') if '1d' in available_intervals else 0,
-        help="Select the data interval/granularity"
-    )
+    interval = st.sidebar.selectbox("Data Interval", options=available_intervals,
+                                   index=available_intervals.index('1d') if '1d' in available_intervals else 0)
 
-    # Cache option
-    use_cache = st.sidebar.checkbox(
-        "Use Cached Data",
-        value=True,
-        help="Use cached data if available to speed up loading"
-    )
+    use_cache = st.sidebar.checkbox("Use Cached Data", value=True)
 
-    # Analysis options
     st.sidebar.markdown("---")
     st.sidebar.subheader("Analysis Options")
 
     show_ma = st.sidebar.checkbox("Show Moving Averages", value=True)
-    ma_periods = st.sidebar.multiselect(
-        "MA Periods",
-        options=[5, 10, 20, 50, 100, 200],
-        default=[20, 50, 200]
-    )
+    ma_periods = st.sidebar.multiselect("MA Periods", options=[5, 10, 20, 50, 100, 200], default=[20, 50, 200])
+    volatility_window = st.sidebar.slider("Volatility Window (days)", min_value=7, max_value=90, value=30)
+    cmf_window = st.sidebar.slider("CMF Window (days)", min_value=10, max_value=30, value=20, step=5)
 
-    volatility_window = st.sidebar.slider(
-        "Volatility Window (days)",
-        min_value=7,
-        max_value=90,
-        value=30,
-        step=1
-    )
-
-    # Fetch button
     st.sidebar.markdown("---")
     fetch_button = st.sidebar.button("Fetch Data", type="primary", use_container_width=True)
 
-    return ticker, period, interval, use_cache, show_ma, ma_periods, volatility_window, fetch_button
-
-
-def fetch_data(ticker, period, interval, use_cache):
-    """Fetch stock data and handle errors"""
-    try:
-        with st.spinner(f"Fetching data for {ticker}..."):
-            data, metadata = fetch_stock_data(ticker, period, interval, use_cache)
-            return data, metadata, None
-    except Exception as e:
-        return None, None, str(e)
-
-
-def display_metadata(metadata):
-    """Display metadata information"""
-    if metadata is None:
-        return
-
-    cols = st.columns(4)
-
-    with cols[0]:
-        st.metric("Ticker", metadata['ticker'])
-
-    with cols[1]:
-        st.metric("Data Points", f"{metadata['rows']:,}")
-
-    with cols[2]:
-        st.metric("Period", metadata['period'].upper())
-
-    with cols[3]:
-        st.metric("Interval", metadata['interval'].upper())
-
-    # Show cache info
-    if metadata['from_cache']:
-        st.info(f"Using cached data from {metadata['cached_time']}")
-
-    # Show date range
-    st.caption(f"**Date Range:** {metadata['date_range'][0]} to {metadata['date_range'][1]}")
+    return ticker, period, interval, use_cache, show_ma, ma_periods, volatility_window, cmf_window, fetch_button
 
 
 def display_key_metrics(stats):
-    """Display key metrics in a prominent way"""
     if stats is None:
         return
 
@@ -209,67 +190,42 @@ def display_key_metrics(stats):
     cols = st.columns(5)
 
     with cols[0]:
-        st.metric(
-            "Current Price",
-            f"${stats['current_price']:.2f}",
-            delta=f"{stats['price_changes'].get('1d', {}).get('percentage', 0):.2f}%"
-                  if '1d' in stats.get('price_changes', {}) else None
-        )
+        price_change = None
+        if '1d' in stats.get('price_changes', {}):
+            price_change = stats['price_changes']['1d'].get('percentage')
+
+        st.metric("Current Price", format_value(stats['current_price'], 'currency'),
+                 delta=f"{price_change:.2f}%" if price_change is not None else None)
 
     with cols[1]:
-        if stats['cumulative_return'] is not None:
-            st.metric(
-                "Cumulative Return",
-                f"{stats['cumulative_return']:.2f}%"
-            )
+        st.metric("Cumulative Return", format_value(stats.get('cumulative_return'), 'percentage'))
 
     with cols[2]:
-        if stats['volatility_30d'] is not None:
-            st.metric(
-                "Volatility (30d)",
-                f"{stats['volatility_30d']:.2f}%"
-            )
+        st.metric("Volatility (30d)", format_value(stats.get('volatility_30d'), 'percentage'))
 
     with cols[3]:
-        st.metric(
-            "Period High",
-            f"${stats['period_high']:.2f}"
-        )
+        st.metric("Period High", format_value(stats.get('period_high'), 'currency'))
 
     with cols[4]:
-        st.metric(
-            "Period Low",
-            f"${stats['period_low']:.2f}"
-        )
+        st.metric("Period Low", format_value(stats.get('period_low'), 'currency'))
 
 
 def display_charts(data, ticker, show_ma, ma_periods, volatility_window):
-    """Display all charts in tabs"""
     if data is None:
         return
 
     st.subheader("Interactive Charts")
 
-    # Create tabs for different charts
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Price Chart",
-        "Volume",
-        "Volatility",
-        "Returns Distribution"
-    ])
+    tab1, tab2, tab3, tab4 = st.tabs(["Price Chart", "Volume", "Volatility", "Returns Distribution"])
 
     with tab1:
         try:
-            fig = plot_price_chart(
-                data,
-                ticker=ticker,
-                show_ma=show_ma,
-                ma_windows=ma_periods if show_ma else []
-            )
+            fig = plot_price_chart(data, ticker=ticker, show_ma=show_ma,
+                                  ma_windows=ma_periods if show_ma else [])
             st.pyplot(fig)
             plt.close(fig)
         except Exception as e:
-            st.error(f"Error creating price chart: {str(e)}")
+            st.error(f"Error: {str(e)}")
 
     with tab2:
         try:
@@ -277,15 +233,18 @@ def display_charts(data, ticker, show_ma, ma_periods, volatility_window):
             st.pyplot(fig)
             plt.close(fig)
         except Exception as e:
-            st.error(f"Error creating volume chart: {str(e)}")
+            st.error(f"Error: {str(e)}")
 
     with tab3:
         try:
-            fig = plot_volatility(data, ticker=ticker, window=volatility_window)
+            adjusted_window = min(volatility_window, max(7, len(data) - 1))
+            fig = plot_volatility(data, ticker=ticker, window=adjusted_window)
+            if adjusted_window < volatility_window:
+                st.info(f"Using {adjusted_window}-day window (insufficient data for {volatility_window}-day)")
             st.pyplot(fig)
             plt.close(fig)
         except Exception as e:
-            st.error(f"Error creating volatility chart: {str(e)}")
+            st.error(f"Error: {str(e)}")
 
     with tab4:
         try:
@@ -293,91 +252,73 @@ def display_charts(data, ticker, show_ma, ma_periods, volatility_window):
             st.pyplot(fig)
             plt.close(fig)
         except Exception as e:
-            st.error(f"Error creating returns distribution: {str(e)}")
+            st.error(f"Error: {str(e)}")
 
 
 def main():
-    """Main application function"""
-    # Initialize session state
     init_session_state()
 
-    # Display header
-    display_header()
+    st.title("Stock Analysis Dashboard")
+    st.markdown("---")
 
-    # Display sidebar and get inputs
-    ticker, period, interval, use_cache, show_ma, ma_periods, volatility_window, fetch_button = display_sidebar()
+    ticker, period, interval, use_cache, show_ma, ma_periods, volatility_window, cmf_window, fetch_button = display_sidebar()
 
-    # Fetch data when button is clicked or ticker changes
     if fetch_button or (ticker != st.session_state.last_ticker and ticker):
-        data, metadata, error = fetch_data(ticker, period, interval, use_cache)
+        try:
+            with st.spinner(f"Fetching data for {ticker}..."):
+                data, metadata = fetch_stock_data(ticker, period, interval, use_cache)
+                st.session_state.data = data
+                st.session_state.metadata = metadata
+                st.session_state.last_ticker = ticker
 
-        if error:
-            st.error(f"Error: {error}")
+                # Auto-adjust windows based on available data
+                data_points = len(data)
+                if data_points < 30:
+                    st.warning(f"Only {data_points} data points. Some calculations may be limited.")
+
+                st.session_state.stats = generate_summary_statistics(
+                    data, ticker=ticker,
+                    ma_windows=ma_periods if show_ma else None,
+                    cmf_window=min(cmf_window, max(10, data_points - 1))
+                )
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
             st.session_state.data = None
-            st.session_state.metadata = None
-            st.session_state.stats = None
-        else:
-            st.session_state.data = data
-            st.session_state.metadata = metadata
-            st.session_state.last_ticker = ticker
 
-            # Generate statistics
-            try:
-                with st.spinner("Analyzing data..."):
-                    st.session_state.stats = generate_summary_statistics(
-                        data,
-                        ticker=ticker,
-                        ma_windows=ma_periods if show_ma else None
-                    )
-            except Exception as e:
-                st.error(f"Error generating statistics: {str(e)}")
-                st.session_state.stats = None
-
-    # Display results if data is available
     if st.session_state.data is not None:
-        # Display metadata
-        display_metadata(st.session_state.metadata)
+        if st.session_state.metadata:
+            cols = st.columns(4)
+            with cols[0]:
+                st.metric("Ticker", st.session_state.metadata['ticker'])
+            with cols[1]:
+                st.metric("Data Points", f"{st.session_state.metadata['rows']:,}")
+            with cols[2]:
+                st.metric("Period", st.session_state.metadata['period'].upper())
+            with cols[3]:
+                st.metric("Interval", st.session_state.metadata['interval'].upper())
 
         st.markdown("---")
-
-        # Display key metrics
         display_key_metrics(st.session_state.stats)
 
         st.markdown("---")
+        display_cmf_and_sentiment(st.session_state.stats)
 
-        # Display charts
-        display_charts(
-            st.session_state.data,
-            ticker,
-            show_ma,
-            ma_periods,
-            volatility_window
-        )
-
+        st.markdown("---")
+        display_charts(st.session_state.data, ticker, show_ma, ma_periods, volatility_window)
     else:
-        # Show welcome message when no data is loaded
         st.info("Enter a stock ticker and click 'Fetch Data' to begin analysis")
 
-        # Show popular tickers
         st.subheader("Popular Tickers")
-
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            st.markdown("**Tech:**")
-            st.markdown("AAPL\n\nMSFT\n\nGOOGL\n\nAMZN\n\nMETA")
-
+            st.markdown("**Tech:**\n\nAAPL\n\nMSFT\n\nGOOGL")
         with col2:
-            st.markdown("**Finance:**")
-            st.markdown("JPM\n\nBAC\n\nGS\n\nV\n\nMA")
-
+            st.markdown("**Finance:**\n\nJPM\n\nBAC\n\nGS")
         with col3:
-            st.markdown("**Healthcare:**")
-            st.markdown("JNJ\n\nUNH\n\nPFE\n\nABBV\n\nTMO")
-
+            st.markdown("**Healthcare:**\n\nJNJ\n\nUNH\n\nPFE")
         with col4:
-            st.markdown("**Energy:**")
-            st.markdown("XOM\n\nCVX\n\nCOP\n\nSLB\n\nEOG")
+            st.markdown("**Energy:**\n\nXOM\n\nCVX\n\nCOP")
 
 
 if __name__ == "__main__":
