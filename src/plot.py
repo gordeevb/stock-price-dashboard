@@ -1,7 +1,7 @@
 """
 Module: plot.py
 Description: Visualization functions for stock data analysis using Matplotlib and Plotly.
-             Creates professional, publication-ready charts with consistent styling.
+             Creates charts with consistent styling.
 """
 
 import logging
