@@ -1,0 +1,33 @@
+Metric,Value
+Ticker,AAPL
+Period,2024-11-01 to 2025-10-01
+Data Points,12
+,
+CURRENT PRICE,
+Current Price,$268.81
+Previous Close,$254.63
+Daily Change,$+14.18 (+5.57%)
+,
+PRICE EXTREMES,
+Period High,$269.08 (2025-10-01)
+Period Low,$168.80 (2025-04-01)
+,
+PRICE CHANGES,
+1D Change,$+0.00 (+0.00%)
+1M Change,$+14.18 (+5.57%)
+1Y Change,$+32.58 (+13.79%)
+,
+RETURNS,
+Avg Daily Return,1.3777%
+Cumulative Return,13.79%
+,
+VOLATILITY,
+30-Day (Annualized),105.03%
+,
+VOLUME,
+Current Volume,"844,558,461"
+20-Day Avg Volume,"1,113,229,855"
+Current vs Avg,75.9%
+,
+RISK METRICS,
+Sharpe Ratio,28.94
