@@ -97,7 +97,7 @@ def run_interactive_mode():
             print(f"  Saved to: {csv_file}")
 
 
-        # Automatically create and display multiple charts
+        # Create and display multiple charts
         print("\nCreating charts...")
         display_multiple_charts(data, ticker)
 

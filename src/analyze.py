@@ -1,9 +1,8 @@
 """
-Stock Analysis Module - Updated with CMF Window Parameter
+Stock Analysis Module
 
 This module provides functions for analyzing stock market data including
 returns calculation, volatility analysis, and technical indicators.
-Now includes configurable Chaikin Money Flow calculation.
 """
 
 import pandas as pd

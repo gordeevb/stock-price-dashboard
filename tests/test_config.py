@@ -83,21 +83,20 @@ class TestAnalysisConfiguration:
         assert hasattr(config, 'DEFAULT_MA_WINDOWS')
         assert isinstance(config.DEFAULT_MA_WINDOWS, list)
         assert len(config.DEFAULT_MA_WINDOWS) > 0
-        
         for window in config.DEFAULT_MA_WINDOWS:
             assert isinstance(window, int)
             assert window > 0
-    
+
     def test_default_volatility_window(self):
         assert hasattr(config, 'DEFAULT_VOLATILITY_WINDOW')
         assert isinstance(config.DEFAULT_VOLATILITY_WINDOW, int)
         assert config.DEFAULT_VOLATILITY_WINDOW > 0
-    
+
     def test_trading_days_per_year(self):
         assert hasattr(config, 'TRADING_DAYS_PER_YEAR')
         assert isinstance(config.TRADING_DAYS_PER_YEAR, int)
         assert config.TRADING_DAYS_PER_YEAR == 252
-    
+
     def test_risk_free_rate(self):
         assert hasattr(config, 'RISK_FREE_RATE')
         assert isinstance(config.RISK_FREE_RATE, (int, float))
@@ -108,11 +107,10 @@ class TestVisualizationConfiguration:
     def test_chart_style(self):
         assert hasattr(config, 'CHART_STYLE')
         assert isinstance(config.CHART_STYLE, str)
-    
+
     def test_color_palette(self):
         assert hasattr(config, 'COLOR_PALETTE')
         assert isinstance(config.COLOR_PALETTE, dict)
-        
         for color in ['primary', 'secondary', 'accent']:
             if color in config.COLOR_PALETTE:
                 assert isinstance(config.COLOR_PALETTE[color], str)
@@ -124,7 +122,7 @@ class TestPopularTickers:
         assert hasattr(config, 'POPULAR_TICKERS')
         assert isinstance(config.POPULAR_TICKERS, dict)
         assert len(config.POPULAR_TICKERS) > 0
-    
+
     def test_popular_tickers_categories(self):
         for category, tickers in config.POPULAR_TICKERS.items():
             assert isinstance(tickers, list)
@@ -137,7 +135,7 @@ class TestErrorMessages:
         assert hasattr(config, 'ERROR_MESSAGES')
         assert isinstance(config.ERROR_MESSAGES, dict)
         assert len(config.ERROR_MESSAGES) > 0
-    
+
     def test_error_messages_are_strings(self):
         for key, message in config.ERROR_MESSAGES.items():
             assert isinstance(message, str)
@@ -146,9 +144,9 @@ class TestErrorMessages:
 
 class TestColorValidation:
     def test_all_colors_valid_hex(self):
+        """Test that all colors are valid hex format"""
         import re
         hex_pattern = re.compile(r'^#[0-9A-Fa-f]{6}$')
-        
         for color_name, color_value in config.COLOR_PALETTE.items():
             assert hex_pattern.match(color_value), \
                 f"Color '{color_name}' has invalid hex value: {color_value}"

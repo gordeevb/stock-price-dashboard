@@ -49,7 +49,7 @@ class PlotError(Exception):
 
 
 def setup_plot_style():
-    """Configure matplotlib global settings for consistent styling."""
+    """Configure matplotlib global settings for styling."""
     plt.rcParams['figure.figsize'] = FIGURE_SIZE
     plt.rcParams['figure.dpi'] = DPI
     plt.rcParams['font.size'] = FONT_SIZE_TICK
@@ -90,7 +90,7 @@ def format_large_number(num: float) -> str:
         num (float): Number to format
 
     Returns:
-        str: Formatted string (e.g., "1.5M", "2.3B")
+        str: Formatted string
     """
     if num >= 1e9:
         return f"{num/1e9:.1f}B"
@@ -233,7 +233,7 @@ def plot_volume_chart(df: pd.DataFrame, ticker: str = "",
         # Format y-axis for large numbers
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: format_large_number(x)))
 
-        # Format x-axis dates, ensure proper datetime handling
+        # Format x-axis dates and ensure datetime handling
         if isinstance(df.index, pd.DatetimeIndex):
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
             ax.xaxis.set_major_locator(mdates.AutoDateLocator())
@@ -277,7 +277,7 @@ def plot_volatility(df: pd.DataFrame, ticker: str = "", window: int = 30,
         figsize = (12, 5)
 
     try:
-        # Adjust window if not enough data
+        # Adjust window
         if len(df) < window:
             window = max(5, len(df) // 2)  # Use smaller window
             logger.warning(f"Not enough data for {window}-day volatility, using {window}-day instead")
@@ -376,11 +376,6 @@ def plot_returns_distribution(df: pd.DataFrame, ticker: str = "",
                 patch.set_facecolor(COLOR_PALETTE['danger'])
             else:
                 patch.set_facecolor(COLOR_PALETTE['success'])
-
-
-        # Add vertical line at mean
-        #ax.axvline(x=mu, color=COLOR_PALETTE['accent'], linestyle='--',
-                  #linewidth=2, alpha=0.7)
 
         # Formatting
         title = f'{ticker} Daily Returns Distribution' if ticker else 'Daily Returns Distribution'
