@@ -156,7 +156,7 @@ This opens your browser at `http://localhost:8501` with:
 - **Smart caching system** with different expiry times:
   - Intraday data (1m, 5m): 15-minute cache
   - Daily and more data (1d, 1wk): 24-hour cache
-- **Retry logic** with exponential backoff (2s → 4s → 8s)
+- **Retry logic** with exponential backoff
 - **Fallback mechanism** uses expired cache if network fails
 - **Input validation** prevents invalid API calls
 
